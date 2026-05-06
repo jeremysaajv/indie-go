@@ -1,0 +1,7 @@
+.env
+epk_data/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+deploy.bat
