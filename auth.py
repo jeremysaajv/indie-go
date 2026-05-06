@@ -5,9 +5,18 @@ from pathlib import Path
 from dotenv import load_dotenv
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-from config import AUTHORIZED_USER_IDS, DEVELOPER_USER_IDS, SCOPES, REDIRECT_URI
+from config import AUTHORIZED_USER_IDS, DEVELOPER_USER_IDS, SCOPES
 
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
+
+
+def _redirect_uri():
+    """Read REDIRECT_URI at call time — Streamlit secrets aren't in os.environ at import time."""
+    try:
+        import streamlit as st
+        return st.secrets.get("REDIRECT_URI", os.getenv("REDIRECT_URI", "http://127.0.0.1:8080"))
+    except Exception:
+        return os.getenv("REDIRECT_URI", "http://127.0.0.1:8080")
 
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
@@ -19,7 +28,7 @@ def get_auth_url():
     params = {
         "client_id": client_id,
         "response_type": "code",
-        "redirect_uri": REDIRECT_URI,
+        "redirect_uri": _redirect_uri(),
         "scope": SCOPES,
         "show_dialog": "true",
     }
@@ -42,7 +51,7 @@ def exchange_code_for_token(code):
     data = {
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": REDIRECT_URI,
+        "redirect_uri": _redirect_uri(),
     }
 
     response = requests.post(SPOTIFY_TOKEN_URL, headers=headers, data=data)
