@@ -27,6 +27,17 @@ HEADERS = {
 
 SKIP_DOMAINS = {"open.spotify.com", "accounts.spotify.com", "spotify.com"}
 
+# Domains that are never relevant to music artist research
+_NOISE_DOMAINS = {
+    "zhihu.com", "quora.com", "reddit.com", "stackoverflow.com",
+    "stackexchange.com", "wikihow.com", "answers.yahoo.com",
+    "amazon.com", "ebay.com", "etsy.com",
+    "linkedin.com", "glassdoor.com", "indeed.com",
+    "coursera.org", "udemy.com", "khan academy.org",
+    "aliexpress.com", "taobao.com", "jd.com",
+    "weibo.com", "baidu.com", "163.com", "sina.com.cn",
+}
+
 
 def _domain(url):
     try:
@@ -37,7 +48,11 @@ def _domain(url):
 
 def _is_useful(url):
     d = _domain(url)
-    return not any(skip in d for skip in SKIP_DOMAINS)
+    if any(skip in d for skip in SKIP_DOMAINS):
+        return False
+    if any(noise in d for noise in _NOISE_DOMAINS):
+        return False
+    return True
 
 
 def _is_relevant(result, artist_name):
@@ -61,10 +76,17 @@ def _is_relevant(result, artist_name):
     if name_no_space in title or name_no_space in href:
         return True
 
-    # Weak signal — name only in snippet; require it to be substantial
-    # (guards against Bing block-parser bleed where unrelated text seeps in)
-    if (full_name in body or name_no_space in body) and len(body) > 80:
-        return True
+    # Weak signal — name in snippet, but require a music context word too.
+    # This prevents misaligned Google blocks (zhihu URL + Derek snippet body)
+    # from sneaking through just because the wrong body was paired with a URL.
+    if len(body) > 80 and (full_name in body or name_no_space in body):
+        _music_ctx = {
+            "musician", "artist", "music", "band", "album", "single",
+            "song", "tour", "concert", "release", "spotify", "label",
+            "genre", "ep", "debut", "track", "record", "singer",
+        }
+        if any(t in body for t in _music_ctx):
+            return True
 
     return False
 
