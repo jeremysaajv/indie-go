@@ -1120,7 +1120,9 @@ def render_landing():
             </div>
         </div>
         """, unsafe_allow_html=True)
-        st.link_button("Login with Spotify", url=get_auth_url(), use_container_width=True)
+        auth_url = get_auth_url()
+        st.caption(f"DEBUG redirect_uri: {auth_url.split('redirect_uri=')[1].split('&')[0] if 'redirect_uri=' in auth_url else 'not found'}")
+        st.link_button("Login with Spotify", url=auth_url, use_container_width=True)
 
 
 # ─── Public EPK viewer ────────────────────────────────────────────────────────
