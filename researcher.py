@@ -481,22 +481,28 @@ def _probe_social_profiles(artist_name, log):
                     log.append(f"  Instagram miss ({r.status_code}, final={r.url[:60]}): {url}")
 
             # ── YouTube validation ────────────────────────────────────────────
-            # YouTube 404s return status 404 or redirect to youtube.com
-            # A valid channel page contains the channel handle or name in the HTML
+            # Valid channel: stays on /@slug or /c/slug after redirects.
+            # Non-existent: YouTube redirects to homepage or /results search.
             elif platform == "yt":
                 if r.status_code == 200:
-                    body_lower = r.text[:8000].lower()
-                    slug_found = any(
-                        s in body_lower
-                        for s in [slug_compact, slug_hyphen, slug_under,
-                                  artist_name.lower()]
+                    final = r.url.rstrip("/").lower()
+                    bad_redirects = [
+                        "youtube.com/results",
+                        "youtube.com/?",
+                        "youtube.com/feed",
+                    ]
+                    is_bad = any(b in final for b in bad_redirects)
+                    # Final URL must still contain part of the slug
+                    slug_in_final = any(
+                        s in final
+                        for s in [slug_compact, slug_hyphen, slug_under]
                     )
-                    if slug_found:
-                        log.append(f"  YouTube ✓ {url}")
+                    if not is_bad and slug_in_final:
+                        log.append(f"  YouTube ✓ {url} (final: {r.url[:60]})")
                         found.append({"href": url, "title": f"{artist_name} — YouTube", "body": ""})
                         seen_platforms.add(platform)
                     else:
-                        log.append(f"  YouTube miss (handle not in body): {url}")
+                        log.append(f"  YouTube miss (final={r.url[:60]}): {url}")
                 else:
                     log.append(f"  YouTube {r.status_code}: {url}")
 
