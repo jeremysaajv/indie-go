@@ -420,6 +420,92 @@ def parse_social_stats(items):
     return stats
 
 
+# ─── Direct social profile prober ────────────────────────────────────────────
+
+def _probe_social_profiles(artist_name, log):
+    """
+    Construct likely social media handles and verify them via GET request.
+    Uses body content validation — Instagram/YouTube both serve 200 for dead
+    pages sometimes, so we check the response text confirms the profile exists.
+
+    Slug variants tried (in order):
+      compact:    "derekandthecats"
+      hyphenated: "derek-and-the-cats"
+      underscored:"derek_and_the_cats"
+    """
+    base = artist_name.lower()
+    base = re.sub(r'&', 'and', base)
+    base = re.sub(r"[^\w\s-]", '', base).strip()
+
+    slug_compact = base.replace(" ", "")
+    slug_hyphen  = base.replace(" ", "-")
+    slug_under   = base.replace(" ", "_")
+
+    # Instagram candidates first, then YouTube variants
+    candidates = []
+    for slug in dict.fromkeys([slug_compact, slug_hyphen, slug_under]):
+        candidates.append((f"https://www.instagram.com/{slug}/", "instagram.com", "ig"))
+        candidates.append((f"https://www.youtube.com/@{slug}",   "youtube.com",   "yt"))
+        candidates.append((f"https://www.youtube.com/c/{slug}",  "youtube.com",   "yt"))
+
+    found = []
+    seen_platforms = set()   # "ig", "yt" — stop after first confirmed hit per platform
+
+    _probe_headers = {
+        **HEADERS,
+        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+    }
+
+    for url, dom, platform in candidates:
+        if platform in seen_platforms:
+            continue
+        try:
+            r = requests.get(url, timeout=8, headers=_probe_headers,
+                             allow_redirects=True)
+
+            # ── Instagram validation ──────────────────────────────────────────
+            # Instagram 404s redirect to login (final URL = instagram.com/accounts/...)
+            # A valid profile page keeps the URL on instagram.com/{slug}
+            if platform == "ig":
+                final_url = r.url.rstrip("/").lower()
+                slug_in_url = any(
+                    s in final_url
+                    for s in [slug_compact, slug_hyphen, slug_under]
+                )
+                is_login_redirect = "accounts" in final_url or "login" in final_url
+                if r.status_code == 200 and slug_in_url and not is_login_redirect:
+                    log.append(f"  Instagram ✓ {url}")
+                    found.append({"href": url, "title": f"{artist_name} — Instagram", "body": ""})
+                    seen_platforms.add(platform)
+                else:
+                    log.append(f"  Instagram miss ({r.status_code}, final={r.url[:60]}): {url}")
+
+            # ── YouTube validation ────────────────────────────────────────────
+            # YouTube 404s return status 404 or redirect to youtube.com
+            # A valid channel page contains the channel handle or name in the HTML
+            elif platform == "yt":
+                if r.status_code == 200:
+                    body_lower = r.text[:8000].lower()
+                    slug_found = any(
+                        s in body_lower
+                        for s in [slug_compact, slug_hyphen, slug_under,
+                                  artist_name.lower()]
+                    )
+                    if slug_found:
+                        log.append(f"  YouTube ✓ {url}")
+                        found.append({"href": url, "title": f"{artist_name} — YouTube", "body": ""})
+                        seen_platforms.add(platform)
+                    else:
+                        log.append(f"  YouTube miss (handle not in body): {url}")
+                else:
+                    log.append(f"  YouTube {r.status_code}: {url}")
+
+        except Exception as e:
+            log.append(f"  Probe error ({url}): {e}")
+
+    return found
+
+
 # ─── Main entry point ─────────────────────────────────────────────────────────
 
 def research_artist(artist_name, genres=None, artist_id=None,
@@ -468,6 +554,12 @@ def research_artist(artist_name, genres=None, artist_id=None,
             })
             return True
         return False
+
+    # ── 0. Social profiles — always first, guaranteed slots ───────────────────
+    # Run before everything else so Instagram + YouTube are never crowded out.
+    log.append("--- Social Profiles (priority) ---")
+    for r in _probe_social_profiles(artist_name, log):
+        add_item(r, skip_relevance=True)
 
     # ── 1. Wikipedia ──────────────────────────────────────────────────────────
     log.append("--- Wikipedia ---")
@@ -532,14 +624,13 @@ def research_artist(artist_name, genres=None, artist_id=None,
             add_item(r)
         time.sleep(0.3)
 
-    # ── 5. Social media profiles ──────────────────────────────────────────────
+    # ── 5. Social media search fallback (supplements direct probe) ───────────
+    # Only runs if direct probe missed Instagram or YouTube (e.g. unusual handle).
     if len(items) < MAX_SOURCES:
-        log.append("\n--- Social Media ---")
+        log.append("\n--- Social Media (search fallback) ---")
         social_queries = [
             f"{artist_name} official Instagram",
             f"{artist_name} YouTube channel music",
-            f"{artist_name} Twitter official",
-            f"{artist_name} SoundCloud",
         ]
         social_blocked = {"instagram.com", "tiktok.com"}
         for q in social_queries:
