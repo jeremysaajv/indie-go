@@ -7,7 +7,8 @@
 # Full access to all artist profiles for testing purposes.
 # ============================================================
 DEVELOPER_USER_IDS = {
-    "95cm1z9hpxncv9a6sytt8oi5c",  # Jeremy (developer)
+    # "95cm1z9hpxncv9a6sytt8oi5c",  # Jeremy — commented out for demo (artist mode active)
+    # Re-enable this and comment out AUTHORIZED_USER_IDS entry to restore developer access
 }
 
 # Artist profiles — keyed by Spotify ARTIST PAGE ID
@@ -44,8 +45,8 @@ ARTIST_PROFILES = {
 #   "31xvpz2n7wkjqpsdlcf4xyz": "02t7FwVp7Bgif8teVSqYDn",
 # ============================================================
 AUTHORIZED_USER_IDS = {
-    # Jeremy mapped to George Paul for UAT testing
-    "95cm1z9hpxncv9a6sytt8oi5c": "02t7FwVp7Bgif8teVSqYDn",
+    # Jeremy mapped to Derek and the Cats for demo
+    "95cm1z9hpxncv9a6sytt8oi5c": "1c05tPqGrM6uVvYTzYySW2",
 
     # Ashbel Peter — add after first login
     # "ASHBEL_USER_ID_HERE": "3tujXdkggqf5yCp80Yc6PH",
