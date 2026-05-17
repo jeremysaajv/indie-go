@@ -1078,49 +1078,74 @@ def render_landing():
 
     st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
 
-    # ── Two action cards ──────────────────────────────────────────────────────
-    col_l, col_r = st.columns(2, gap="large")
+    # ── Three action cards ────────────────────────────────────────────────────
+    col_l, col_m, col_r = st.columns(3, gap="medium")
 
+    # ── Card 1: Listener ──────────────────────────────────────────────────────
     with col_l:
         st.markdown("""
         <div style="
             background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(29,185,84,0.25);
+            border: 1px solid rgba(29,185,84,0.30);
             border-radius: 12px;
-            padding: 28px 28px 20px 28px;
+            padding: 26px 24px 18px 24px;
             margin-bottom: 8px;
+            min-height: 130px;
         ">
-            <div style="font-family:'Raleway',sans-serif; font-size:19px; font-weight:600; color:#1DB954; margin-bottom:6px;">🎵 Generate a Live EPK</div>
-            <div style="font-family:'Raleway',sans-serif; font-size:13px; color:#888; margin-bottom:18px; letter-spacing:0.5px;">
-                Paste any Spotify Artist URL — data is fetched live, no account needed.
+            <div style="font-family:'Raleway',sans-serif; font-size:17px; font-weight:600; color:#1DB954; margin-bottom:6px;">👂 I'm a Listener</div>
+            <div style="font-family:'Raleway',sans-serif; font-size:12px; color:#888; margin-bottom:0px; letter-spacing:0.5px;">
+                View any artist's EPK. Paste their Spotify URL to explore their profile — no account needed.
             </div>
         </div>
         """, unsafe_allow_html=True)
         artist_input = st.text_input("URL", placeholder="https://open.spotify.com/artist/...", label_visibility="collapsed")
-        if st.button("Generate EPK →", use_container_width=True):
+        if st.button("View EPK →", use_container_width=True):
             artist_id = parse_artist_id(artist_input)
             if artist_id:
                 st.session_state.public_artist_id = artist_id
                 st.rerun()
             else:
-                st.error("Invalid Spotify URL or URI.")
+                st.error("Invalid Spotify URL.")
 
+    # ── Card 2: Artist ────────────────────────────────────────────────────────
+    with col_m:
+        st.markdown("""
+        <div style="
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(225,65,169,0.35);
+            border-radius: 12px;
+            padding: 26px 24px 18px 24px;
+            margin-bottom: 8px;
+            min-height: 130px;
+        ">
+            <div style="font-family:'Raleway',sans-serif; font-size:17px; font-weight:600; color:#E141A9; margin-bottom:6px;">🎤 I'm an Artist</div>
+            <div style="font-family:'Raleway',sans-serif; font-size:12px; color:#888; margin-bottom:0px; letter-spacing:0.5px;">
+                Log in with your Spotify account to build, customize, and export your own EPK.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        st.link_button("Login as Artist →", url=get_auth_url(), use_container_width=True)
+
+    # ── Card 3: Developer ─────────────────────────────────────────────────────
     with col_r:
         st.markdown("""
         <div style="
             background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(225,65,169,0.3);
+            border: 1px solid rgba(124,58,237,0.35);
             border-radius: 12px;
-            padding: 28px 28px 20px 28px;
+            padding: 26px 24px 18px 24px;
             margin-bottom: 8px;
+            min-height: 130px;
         ">
-            <div style="font-family:'Raleway',sans-serif; font-size:19px; font-weight:600; color:#E141A9; margin-bottom:6px;">🔐 Artist / Developer Login</div>
-            <div style="font-family:'Raleway',sans-serif; font-size:13px; color:#888; margin-bottom:18px; letter-spacing:0.5px;">
-                Log in with Spotify to edit, customize, and export your EPK to PDF.
+            <div style="font-family:'Raleway',sans-serif; font-size:17px; font-weight:600; color:#7c3aed; margin-bottom:6px;">⚙️ I'm a Developer</div>
+            <div style="font-family:'Raleway',sans-serif; font-size:12px; color:#888; margin-bottom:0px; letter-spacing:0.5px;">
+                Full access to all artist profiles for testing, configuration, and platform management.
             </div>
         </div>
         """, unsafe_allow_html=True)
-        st.link_button("Login with Spotify", url=get_auth_url(), use_container_width=True)
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        st.link_button("Login as Developer →", url=get_auth_url(), use_container_width=True)
 
 
 # ─── Public EPK viewer ────────────────────────────────────────────────────────
