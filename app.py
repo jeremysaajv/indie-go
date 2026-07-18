@@ -1161,7 +1161,6 @@ def generate_default_bio(artist_data):
     genres    = artist_data.get("genres", [])
     followers = artist_data.get("spotify_followers", 0)
     albums    = artist_data.get("albums", [])
-    top_tracks = artist_data.get("top_tracks", [])
 
     genre_str  = ", ".join(genres[:3]) if genres else "independent"
     followers_str = _fmt_number(followers) if followers else None
@@ -1191,9 +1190,6 @@ def generate_default_bio(artist_data):
         bullets.append(f"{ep_count} EP{'s' if ep_count > 1 else ''}")
     if single_count:
         bullets.append(f"{single_count} single{'s' if single_count > 1 else ''}")
-    if top_tracks:
-        bullets.append(f"Notable track: \"{top_tracks[0]['name']}\"")
-
     staccato = "\n".join(f"• {b}" for b in bullets)
 
     # ── Legacy bio ────────────────────────────────────────────────────────────
@@ -1231,10 +1227,6 @@ def generate_default_bio(artist_data):
             f"({recent.get('release_date', '')[:4]}), continues to showcase their "
             f"artistic evolution."
         )
-
-    if top_tracks:
-        track_names = ", ".join(f"\"{t['name']}\"" for t in top_tracks[:3])
-        parts.append(f"Standout tracks include {track_names}.")
 
     legacy = "\n\n".join(parts)
     return {"staccato": staccato, "legacy": legacy}
@@ -1311,7 +1303,7 @@ def render_public_epk(artist_id):
     bio      = generate_default_bio(data)
     settings = default_settings(data)
     html_preview = build_html_preview(data, bio, settings)
-    components.html(html_preview, height=950, scrolling=True)
+    components.html(html_preview, height=1400, scrolling=True)
 
 
 # ─── Router ───────────────────────────────────────────────────────────────────
