@@ -1148,6 +1148,98 @@ def render_landing():
         st.link_button("Login as Developer →", url=get_auth_url(), use_container_width=True)
 
 
+# ─── Default bio generator (no Claude call — Spotify data only) ──────────────
+
+def generate_default_bio(artist_data):
+    """
+    Builds a staccato + legacy bio purely from Spotify data.
+    Used when no finalized EPK exists, so listeners still see something useful.
+    """
+    from synthesizer import _fmt_number
+
+    name      = artist_data.get("name", "This artist")
+    genres    = artist_data.get("genres", [])
+    followers = artist_data.get("spotify_followers", 0)
+    albums    = artist_data.get("albums", [])
+    top_tracks = artist_data.get("top_tracks", [])
+
+    genre_str  = ", ".join(genres[:3]) if genres else "independent"
+    followers_str = _fmt_number(followers) if followers else None
+
+    # Career span
+    years = [
+        int(a["release_date"][:4])
+        for a in albums
+        if a.get("release_date") and a["release_date"][:4].isdigit()
+    ]
+    first_year = min(years) if years else None
+    album_count  = len([a for a in albums if a.get("album_type") == "album"])
+    single_count = len([a for a in albums if a.get("album_type") == "single"])
+    ep_count     = len([a for a in albums if a.get("album_type") == "ep"])
+
+    # ── Staccato bullets ──────────────────────────────────────────────────────
+    bullets = []
+    if genres:
+        bullets.append(f"Genre: {genre_str.title()}")
+    if followers_str:
+        bullets.append(f"{followers_str} Spotify followers")
+    if first_year:
+        bullets.append(f"Active since {first_year}")
+    if album_count:
+        bullets.append(f"{album_count} album{'s' if album_count > 1 else ''}")
+    if ep_count:
+        bullets.append(f"{ep_count} EP{'s' if ep_count > 1 else ''}")
+    if single_count:
+        bullets.append(f"{single_count} single{'s' if single_count > 1 else ''}")
+    if top_tracks:
+        bullets.append(f"Notable track: \"{top_tracks[0]['name']}\"")
+
+    staccato = "\n".join(f"• {b}" for b in bullets)
+
+    # ── Legacy bio ────────────────────────────────────────────────────────────
+    parts = []
+
+    intro = f"{name} is a {genre_str} artist"
+    if first_year:
+        intro += f" who has been active since {first_year}"
+    intro += "."
+    parts.append(intro)
+
+    release_line = []
+    if album_count:
+        release_line.append(f"{album_count} album{'s' if album_count > 1 else ''}")
+    if ep_count:
+        release_line.append(f"{ep_count} EP{'s' if ep_count > 1 else ''}")
+    if single_count:
+        release_line.append(f"{single_count} single{'s' if single_count > 1 else ''}")
+    if release_line:
+        parts.append(
+            f"Their discography spans {', '.join(release_line)}, reflecting a consistent "
+            f"output across their career."
+        )
+
+    if followers_str:
+        parts.append(
+            f"With {followers_str} followers on Spotify, {name} has built a dedicated "
+            f"fanbase through their music."
+        )
+
+    if albums:
+        recent = albums[0]
+        parts.append(
+            f"Their most recent release, \"{recent['name']}\" "
+            f"({recent.get('release_date', '')[:4]}), continues to showcase their "
+            f"artistic evolution."
+        )
+
+    if top_tracks:
+        track_names = ", ".join(f"\"{t['name']}\"" for t in top_tracks[:3])
+        parts.append(f"Standout tracks include {track_names}.")
+
+    legacy = "\n\n".join(parts)
+    return {"staccato": staccato, "legacy": legacy}
+
+
 # ─── Public EPK viewer ────────────────────────────────────────────────────────
 
 def render_public_epk(artist_id):
@@ -1201,9 +1293,7 @@ def render_public_epk(artist_id):
             )
         return
 
-    # ── No finalized EPK — show live Spotify data only ────────────────────────
-    st.info("No finalized EPK found for this artist. Showing live Spotify data.")
-
+    # ── No finalized EPK — generate a default view from Spotify data ──────────
     with st.spinner("Fetching artist data..."):
         try:
             data = get_full_artist_data(artist_id)
@@ -1215,30 +1305,13 @@ def render_public_epk(artist_id):
         st.error("Could not fetch artist data.")
         return
 
-    col_img, col_info = st.columns([1, 2])
-    with col_img:
-        if data.get("image_url"):
-            st.image(data["image_url"], use_container_width=True)
-    with col_info:
-        st.title(data["name"])
-        st.caption(", ".join(data.get("genres", [])) or "Independent Artist")
-
+    st.caption("📋 Auto-generated profile — artist has not yet finalized their EPK")
     st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-    st.subheader("📊 Momentum Matrix")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Release Momentum", data.get("momentum_proxy", "N/A"))
-    c2.metric("Avg Tempo", f"{data.get('avg_bpm') or 'N/A'} BPM")
-    c3.metric("Energy", data.get("energy_label", "N/A"))
-    c4.metric("Mood", data.get("valence_label", "N/A"))
 
-    if data.get("albums"):
-        st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-        st.subheader("🎵 Discography")
-        for a in data["albums"][:6]:
-            c = st.columns([3, 1, 1])
-            c[0].write(f"**{a['name']}**")
-            c[1].write(a.get("release_date", "")[:7])
-            c[2].write(a.get("album_type", "").upper())
+    bio      = generate_default_bio(data)
+    settings = default_settings(data)
+    html_preview = build_html_preview(data, bio, settings)
+    components.html(html_preview, height=950, scrolling=True)
 
 
 # ─── Router ───────────────────────────────────────────────────────────────────
