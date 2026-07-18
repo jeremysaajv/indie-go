@@ -82,7 +82,9 @@ def check_authorization(user_id):
         return {"role": "developer"}
     if user_id in AUTHORIZED_USER_IDS:
         return {"role": "artist", "artist_id": AUTHORIZED_USER_IDS[user_id]}
-    return {"role": "public"}
+    # Any authenticated Spotify user is treated as an artist —
+    # they'll be prompted to paste their own artist page URL.
+    return {"role": "artist"}
 
 
 def get_spotify_cc_client():
