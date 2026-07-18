@@ -109,7 +109,6 @@ def init_session():
         "manual_instagram": "",
         "manual_youtube":   "",
         "contact_email":    "",
-        "dev_artist_id":    None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -1141,18 +1140,12 @@ def render_landing():
         ">
             <div style="font-family:'Raleway',sans-serif; font-size:17px; font-weight:600; color:#7c3aed; margin-bottom:6px;">⚙️ I'm a Developer</div>
             <div style="font-family:'Raleway',sans-serif; font-size:12px; color:#888; margin-bottom:0px; letter-spacing:0.5px;">
-                Paste any artist's Spotify URL to generate, edit, and export a full EPK — no login required.
+                Log in with your authorized Spotify account to generate, edit, and export EPKs for any artist.
             </div>
         </div>
         """, unsafe_allow_html=True)
-        dev_input = st.text_input("DEV_URL", placeholder="https://open.spotify.com/artist/...", label_visibility="collapsed", key="dev_url_input")
-        if st.button("Generate EPK →", use_container_width=True, key="dev_generate_btn"):
-            dev_id = parse_artist_id(dev_input)
-            if dev_id:
-                st.session_state.dev_artist_id = dev_id
-                st.rerun()
-            else:
-                st.error("Invalid Spotify URL.")
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        st.link_button("Login as Developer →", url=get_auth_url(), use_container_width=True)
 
 
 # ─── Public EPK viewer ────────────────────────────────────────────────────────
@@ -1300,37 +1293,6 @@ def main():
                 for k in list(st.session_state.keys()):
                     del st.session_state[k]
                 st.rerun()
-
-    elif st.session_state.dev_artist_id:
-        # Developer paste-URL flow — full EPK editor, no Spotify login needed
-        if not st.session_state.editor_artist_data:
-            with st.spinner("Loading artist profile..."):
-                try:
-                    data = get_full_artist_data(st.session_state.dev_artist_id)
-                except Exception:
-                    data = None
-            if data:
-                st.session_state.editor_artist_data = data
-                st.rerun()
-            else:
-                st.error("Could not load artist data. Check the Spotify URL.")
-                if st.button("← Back"):
-                    st.session_state.dev_artist_id = None
-                    st.rerun()
-        else:
-            artist_data = st.session_state.editor_artist_data
-            artist_id   = artist_data.get("artist_id", "")
-            persona = ARTIST_PROFILES.get(artist_id, {}).get("persona", "statistician")
-            # Back button
-            if st.button("← Back to Home"):
-                st.session_state.dev_artist_id   = None
-                st.session_state.editor_artist_data = None
-                st.session_state.epk_settings    = None
-                st.session_state.artist_research  = None
-                st.session_state.generated_bio    = None
-                st.session_state.bio_finalized    = False
-                st.rerun()
-            render_epk_editor(artist_data, persona, "developer")
 
     elif st.session_state.public_artist_id:
         render_public_epk(st.session_state.public_artist_id)
